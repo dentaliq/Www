@@ -1,41 +1,41 @@
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
-})
+export default {
+  async fetch(request, env) {
+    try {
+      // قراءة المتغيرات البيئية
+      const BOT_TOKEN = env.AB;
+      const CHAT_ID = env.BC;
 
-async function handleRequest(request) {
-  const AB = 'رمز البوت الخاص بك في تيليجرام'; // ضع رمز البوت هنا
-  const BC = 'معرف المحادثة التي تريد إرسال الرسائل إليها'; // ضع معرف المحادثة هنا
-  
-  if (request.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 })
-  }
-  
-  try {
-    const data = await request.json();
-    const message = JSON.stringify(data, null, 2);
-    
-    const telegramApiUrl = `https://api.telegram.org/bot${AB}/sendMessage`;
-    const telegramResponse = await fetch(telegramApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        chat_id: BC,
+      if (!BOT_TOKEN || !CHAT_ID) {
+        return new Response("Missing BOT_TOKEN or CHAT_ID", { status: 400 });
+      }
+
+      // قراءة الرسالة من الطلب (POST body أو query)
+      let message = "";
+      if (request.method === "POST") {
+        const data = await request.json();
+        message = data.message || JSON.stringify(data);
+      } else {
+        const url = new URL(request.url);
+        message = url.searchParams.get("msg") || "No message provided";
+      }
+
+      // إرسال الرسالة إلى بوت تيليجرام
+      const telegramUrl = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+      const payload = {
+        chat_id: CHAT_ID,
         text: message,
-        parse_mode: 'HTML'
-      })
-    });
-    
-    if (telegramResponse.ok) {
-      return new Response('Success', { status: 200 });
-    } else {
-      const errorText = await telegramResponse.text();
-      console.error('Telegram API error:', errorText);
-      return new Response('Error sending message to Telegram', { status: 500 });
+      };
+
+      const telegramResponse = await fetch(telegramUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await telegramResponse.json();
+      return new Response(JSON.stringify(result), { status: 200 });
+    } catch (err) {
+      return new Response("Error: " + err.message, { status: 500 });
     }
-  } catch (error) {
-    console.error('Error handling request:', error);
-    return new Response('Internal Server Error', { status: 500 });
-  }
-}
+  },
+};
