@@ -1,0 +1,7 @@
+name = "aaaa"
+main = "worker.js"
+compatibility_date = "2025-08-24"
+
+[vars]
+AB = ""
+BC = ""
